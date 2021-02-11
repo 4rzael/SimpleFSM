@@ -8,8 +8,7 @@ enum class States {
 };
 
 enum class Events {
-  TOGGLE,
-  _SIMPLE_FSM_INVALID_
+  TOGGLE
 };
 
 using namespace SimpleFSM;
