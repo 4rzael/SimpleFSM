@@ -1,5 +1,6 @@
 #pragma once
 #include <functional>
+#include <type_traits>
 
 namespace SimpleFSM {
   /**
@@ -15,6 +16,8 @@ namespace SimpleFSM {
     MISSING_STATE
   };
 
+  struct EmptyPayload {};
+
   /**
    * @brief The Finite State Machine
    * 
@@ -24,8 +27,10 @@ namespace SimpleFSM {
    *  The last element MUST be called _SIMPLE_FSM_INVALID_
    * @tparam EventEnum An enum class containing all events supported by the FSM
    */
-  template <class StateEnum, class EventEnum>
+  template <class StateEnum, class EventEnum, class EventPayload_t=EmptyPayload>
   class FSM {
+    public:
+      using EventPayload = EventPayload_t;
     private:
     // A simple helper
     template<class T>
@@ -44,7 +49,7 @@ namespace SimpleFSM {
         virtual void entry() = 0;
         virtual void loop() = 0;
         virtual void exit() = 0;
-        virtual void react(EventEnum event) = 0;
+        virtual void react(EventEnum event, EventPayload const &payload) = 0;
       private:
         StateEnum _state;
       };
@@ -52,13 +57,13 @@ namespace SimpleFSM {
       using EntryFunction = std::function<void ()>;
       using LoopFunction  = std::function<void ()>;
       using ExitFunction  = std::function<void ()>;
-      using ReactFunction = std::function<void (EventEnum event)>;
+      using ReactFunction = std::function<void (EventEnum event, EventPayload const &payload)>;
 
       struct StateConfig {
         EntryFunction entry = [](){};
         LoopFunction  loop  = [](){};
         ExitFunction  exit  = [](){};
-        ReactFunction react = [](EventEnum){};
+        ReactFunction react = [](EventEnum, EventPayload const &payload){};
       };
       /**
        * @brief An implementation of the class State, that can be built by giving it lambdas.
@@ -69,10 +74,10 @@ namespace SimpleFSM {
         LambdaState(StateEnum state, StateConfig const &cfg)
         : State(state), _entry(cfg.entry), _loop(cfg.loop), _exit(cfg.exit), _react(cfg.react) {}
 
-        virtual void entry()                { if (_entry) _entry(); }
-        virtual void loop()                 { if (_loop)  _loop(); }
-        virtual void exit()                 { if (_exit)  _exit(); }
-        virtual void react(EventEnum event) { if (_react) _react(event); }
+        virtual void entry()                                      { if (_entry) _entry(); }
+        virtual void loop()                                       { if (_loop)  _loop(); }
+        virtual void exit()                                       { if (_exit)  _exit(); }
+        virtual void react(EventEnum event, EventPayload const &payload) { if (_react) _react(event, payload); }
 
       private:
         EntryFunction _entry;
@@ -138,12 +143,19 @@ namespace SimpleFSM {
        * Note: This function is synchronous.
        * 
        * @param event The event to dispatch
+       * @param payload The event payload
        * @return FSMError 
        */
-      FSMError emit(EventEnum event) {
+      FSMError emit(EventEnum event, EventPayload const &payload) {
         if (!_started) return FSMError::FSM_NOT_STARTED;
-        _states[to_int(_currentState)]->react(event);
+        _states[to_int(_currentState)]->react(event, payload);
         return FSMError::OK;
+      }
+
+      FSMError emit(EventEnum event) {
+        constexpr bool payloadIsEmpty = ::std::is_same<EventPayload, EmptyPayload>::value;
+        static_assert(payloadIsEmpty, "Cannot call emit() without a payload if the FSM events have a payload");
+        return emit(event, EmptyPayload());
       }
 
       /**

@@ -20,17 +20,25 @@ int main() {
     .entry = []() {
       std::cout << "Entering state ON" << std::endl;
     },
-    .react = [&fsm](Events ev) {
-      if (ev == Events::TOGGLE) fsm.transit(States::OFF);
+    .react = [&fsm](Events ev, FSM::EventPayload) {
+      switch (ev) {
+        case Events::TOGGLE: fsm.transit(States::OFF); break;
+      }
     }
   }));
 
   fsm.addState(new FSM::LambdaState(States::OFF, {
     .entry = []() {
       std::cout << "Entering state OFF" << std::endl;
+    },
+    .react = [&fsm](Events ev, FSM::EventPayload) {
+      switch (ev) {
+        case Events::TOGGLE: fsm.transit(States::ON); break;
+      }
     }
   }));
 
   fsm.start(States::ON);
+  fsm.emit(Events::TOGGLE);
   fsm.emit(Events::TOGGLE);
 }
