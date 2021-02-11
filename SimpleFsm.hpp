@@ -30,6 +30,7 @@ namespace SimpleFSM {
     // A simple helper
     template<class T>
     constexpr static size_t to_int(T v) { return static_cast<size_t>(v); };
+
     public:
       /**
        * @brief The base class for the FSM's state.
@@ -153,6 +154,7 @@ namespace SimpleFSM {
         _states[to_int(_currentState)]->loop();
         return FSMError::OK;
       }
+
     private:
       bool      _started = false;
       StateEnum _initialState = StateEnum::_SIMPLE_FSM_INVALID_;

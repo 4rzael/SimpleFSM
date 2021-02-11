@@ -1,4 +1,6 @@
 # SimpleFSM
+[![CodeFactor](https://www.codefactor.io/repository/github/4rzael/simplefsm/badge)](https://www.codefactor.io/repository/github/4rzael/simplefsm)
+
 A simple FSM header-only library in C++
 
 ## Why this library
