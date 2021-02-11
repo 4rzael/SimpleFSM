@@ -31,6 +31,7 @@ namespace SimpleFSM {
   class FSM {
     public:
       using EventPayload = EventPayload_t;
+
     private:
     // A simple helper
     template<class T>
