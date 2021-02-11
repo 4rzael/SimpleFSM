@@ -2,15 +2,18 @@ IDIR =../include
 CC=g++
 CFLAGS=-I$(IDIR)
 
-all: lambda
+all: switch_lambda elevator_lambda
 
 dir:
 	mkdir -p build
 
-lambda: dir
-	$(CC) $(CFLAGS) lambda_fsm.cpp -o build/lambda_fsm
+switch_lambda: dir
+	$(CC) $(CFLAGS) switch_lambda.cpp -o build/switch_lambda
+
+elevator_lambda: dir
+	$(CC) $(CFLAGS) elevator_lambda.cpp -o build/elevator_lambda
 
 clean:
 	rm -rf build
 
-.PHONY: dir lambda all clean 
+.PHONY: dir switch_lambda elevator_lambda all clean
