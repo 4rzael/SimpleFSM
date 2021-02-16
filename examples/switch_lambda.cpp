@@ -1,5 +1,5 @@
 #include <iostream>
-#include "SimpleFsm.hpp"
+#include "SimpleFSM.hpp"
 
 enum class States {
   ON,
