@@ -1,6 +1,7 @@
 #pragma once
 #include <functional>
 #include <type_traits>
+#include <vector>
 
 namespace SimpleFSM {
   /**
@@ -56,15 +57,15 @@ namespace SimpleFSM {
       };
 
       using EntryFunction = std::function<void ()>;
-      using LoopFunction  = std::function<void ()>;
-      using ExitFunction  = std::function<void ()>;
       using ReactFunction = std::function<void (EventEnum event, EventPayload const &payload)>;
+      using ExitFunction  = std::function<void ()>;
+      using LoopFunction  = std::function<void ()>;
 
-      struct StateConfig {
-        EntryFunction entry = [](){};
-        LoopFunction  loop  = [](){};
-        ExitFunction  exit  = [](){};
-        ReactFunction react = [](EventEnum, EventPayload const &payload){};
+      struct LambdaStateConfig {
+        EntryFunction entry;
+        ReactFunction react;
+        ExitFunction  exit;
+        LoopFunction  loop;
       };
       /**
        * @brief An implementation of the class State, that can be built by giving it lambdas.
@@ -72,19 +73,19 @@ namespace SimpleFSM {
        */
       class LambdaState : public State {
       public:
-        LambdaState(StateEnum state, StateConfig const &cfg)
-        : State(state), _entry(cfg.entry), _loop(cfg.loop), _exit(cfg.exit), _react(cfg.react) {}
+        LambdaState(StateEnum state, LambdaStateConfig const &cfg)
+        : State(state), _entry(cfg.entry), _react(cfg.react), _exit(cfg.exit), _loop(cfg.loop) {}
 
-        virtual void entry()                                      { if (_entry) _entry(); }
-        virtual void loop()                                       { if (_loop)  _loop(); }
-        virtual void exit()                                       { if (_exit)  _exit(); }
+        virtual void entry()                                             { if (_entry) _entry(); }
+        virtual void loop()                                              { if (_loop)  _loop(); }
+        virtual void exit()                                              { if (_exit)  _exit(); }
         virtual void react(EventEnum event, EventPayload const &payload) { if (_react) _react(event, payload); }
 
       private:
         EntryFunction _entry;
-        LoopFunction  _loop;
-        ExitFunction  _exit;
         ReactFunction _react;
+        ExitFunction  _exit;
+        LoopFunction  _loop;
       };
 
       /**
@@ -168,10 +169,61 @@ namespace SimpleFSM {
         return FSMError::OK;
       }
 
+      StateEnum getCurrentState() { return _currentState; }
+
     private:
       bool      _started = false;
       StateEnum _initialState = StateEnum::_SIMPLE_FSM_INVALID_;
       StateEnum _currentState = StateEnum::_SIMPLE_FSM_INVALID_;
       State    *_states[to_int(StateEnum::_SIMPLE_FSM_INVALID_)] = {nullptr};
   };
+
+  template <class StateEnum, class EventEnum, class EventPayload_t=EmptyPayload>
+  class HookableFSM: public FSM<StateEnum, EventEnum, EventPayload_t> {
+  private:
+    using Base = FSM<StateEnum, EventEnum, EventPayload_t>;
+
+  public:
+    using TransitionHook = std::function<void (StateEnum from, StateEnum to)>;
+    using EventHook = std::function<void (EventEnum event, EventPayload_t payload)>;
+
+    void onTransition(TransitionHook const &hook) { _transitionHooks.push_back(hook); }
+    void onEvent(EventHook const &hook) { _eventHooks.push_back(hook); }
+
+    FSMError emit(EventEnum event, EventPayload_t const &payload) {
+      auto result = Base::emit(event, payload);
+      if (result == FSMError::OK) {
+        for (auto const &hook : _eventHooks) {
+          hook(event, payload);
+        }
+      }
+      return result;
+    }
+
+    FSMError emit(EventEnum event) {
+      auto result = Base::emit(event);
+      if (result == FSMError::OK) {
+        for (auto const &hook : _eventHooks) {
+          hook(event);
+        }
+      }
+      return result;
+    }
+
+    FSMError transit(StateEnum newState) {
+      auto oldState = Base::getCurrentState();
+      auto result = Base::transit(newState);
+      if (result == FSMError::OK) {
+        for (auto const &hook : _transitionHooks) {
+          hook(oldState, newState);
+        }
+      }
+      return result;
+    }
+
+  private:
+    std::vector<TransitionHook>  _transitionHooks;
+    std::vector<EventHook>       _eventHooks;
+  };
+
 };
