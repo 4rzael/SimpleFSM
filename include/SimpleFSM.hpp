@@ -185,7 +185,7 @@ namespace SimpleFSM {
 
   public:
     using TransitionHook = std::function<void (StateEnum from, StateEnum to)>;
-    using EventHook = std::function<void (EventEnum event, EventPayload_t payload)>;
+    using EventHook = std::function<void (EventEnum event, EventPayload_t const &payload)>;
 
     void onTransition(TransitionHook const &hook) { _transitionHooks.push_back(hook); }
     void onEvent(EventHook const &hook) { _eventHooks.push_back(hook); }
