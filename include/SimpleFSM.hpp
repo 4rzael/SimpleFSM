@@ -169,7 +169,7 @@ namespace SimpleFSM {
         return FSMError::OK;
       }
 
-      StateEnum getCurrentState() { return _currentState; }
+      StateEnum getCurrentState() const { return _currentState; }
 
     private:
       bool      _started = false;
