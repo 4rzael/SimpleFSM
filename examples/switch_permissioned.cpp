@@ -1,6 +1,8 @@
 #include <iostream>
+#include <cstdlib>
 #include "SimpleFSM.hpp"
 #include "LambdaState.hpp"
+#include "PermissionedFSM.hpp"
 
 enum class States {
   ON,
@@ -14,7 +16,9 @@ enum class Events {
 
 using namespace SimpleFSM;
 int main() {
-  using FSM = FSM<States, Events>;
+  srand(0);
+
+  using FSM = PermissionedFSM<FSM<States, Events>, States>;
   using LambdaState = LambdaState<States, Events>;
   FSM fsm;
 
@@ -40,7 +44,22 @@ int main() {
     }
   }));
 
+  fsm.addRule([&fsm](States state) {
+    return (rand() % 2 == 1) ? state : fsm.getCurrentState();
+  });
+  fsm.onPermissionRejection([](States to) {
+    std::cout << "Permission rejected" << std::endl;
+  });
+
   fsm.start(States::ON);
+  std::cout << "Toggling" << std::endl;
   fsm.emit(Events::TOGGLE);
+  std::cout << "Toggling" << std::endl;
+  fsm.emit(Events::TOGGLE);
+  std::cout << "Toggling" << std::endl;
+  fsm.emit(Events::TOGGLE);
+  std::cout << "Toggling" << std::endl;
+  fsm.emit(Events::TOGGLE);
+  std::cout << "Toggling" << std::endl;
   fsm.emit(Events::TOGGLE);
 }

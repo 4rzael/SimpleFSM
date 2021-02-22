@@ -14,7 +14,8 @@ namespace SimpleFSM {
     FSM_NOT_STARTED,
     BAD_STATE,
     STATE_ALREADY_SET,
-    MISSING_STATE
+    MISSING_STATE,
+    INVALID_PERMISSION
   };
 
   struct EmptyPayload {};
@@ -36,7 +37,7 @@ namespace SimpleFSM {
     private:
     // A simple helper
     template<class T>
-    constexpr static size_t to_int(T v) { return static_cast<size_t>(v); };
+    constexpr static size_t to_size_t(T v) { return static_cast<size_t>(v); };
 
     public:
       /**
@@ -56,38 +57,6 @@ namespace SimpleFSM {
         StateEnum _state;
       };
 
-      using EntryFunction = std::function<void ()>;
-      using ReactFunction = std::function<void (EventEnum event, EventPayload const &payload)>;
-      using ExitFunction  = std::function<void ()>;
-      using LoopFunction  = std::function<void ()>;
-
-      struct LambdaStateConfig {
-        EntryFunction entry;
-        ReactFunction react;
-        ExitFunction  exit;
-        LoopFunction  loop;
-      };
-      /**
-       * @brief An implementation of the class State, that can be built by giving it lambdas.
-       * This allows to create small FSMs with few boilerplate
-       */
-      class LambdaState : public State {
-      public:
-        LambdaState(StateEnum state, LambdaStateConfig const &cfg)
-        : State(state), _entry(cfg.entry), _react(cfg.react), _exit(cfg.exit), _loop(cfg.loop) {}
-
-        virtual void entry()                                             { if (_entry) _entry(); }
-        virtual void loop()                                              { if (_loop)  _loop(); }
-        virtual void exit()                                              { if (_exit)  _exit(); }
-        virtual void react(EventEnum event, EventPayload const &payload) { if (_react) _react(event, payload); }
-
-      private:
-        EntryFunction _entry;
-        ReactFunction _react;
-        ExitFunction  _exit;
-        LoopFunction  _loop;
-      };
-
       /**
        * @brief Adds a state to the FSM.
        * All states in the enum MUST be added once and only once to the FSM, 
@@ -98,8 +67,8 @@ namespace SimpleFSM {
         auto s = state->getValue();
         if (_started) return FSMError::FSM_ALREADY_STARTED;
         if (s >= StateEnum::_SIMPLE_FSM_INVALID_) return FSMError::BAD_STATE; //TODO: Make sure enums are unsigned
-        if (_states[to_int(s)] != nullptr) return FSMError::STATE_ALREADY_SET;
-        _states[to_int(s)] = state;
+        if (_states[to_size_t(s)] != nullptr) return FSMError::STATE_ALREADY_SET;
+        _states[to_size_t(s)] = state;
         return FSMError::OK;
       }
 
@@ -109,14 +78,14 @@ namespace SimpleFSM {
        * @param initialState The state to start the FSM in
        */
       FSMError start(StateEnum initialState) {
-        for (size_t i = 0; i < to_int(StateEnum::_SIMPLE_FSM_INVALID_); ++i) {
+        for (size_t i = 0; i < to_size_t(StateEnum::_SIMPLE_FSM_INVALID_); ++i) {
           if (_states[i] == nullptr) return FSMError::MISSING_STATE;
         }
 
         _initialState = initialState;
         _currentState = _initialState;
         _started = true;
-        _states[to_int(_currentState)]->entry();
+        _states[to_size_t(_currentState)]->entry();
         return FSMError::OK;
       }
 
@@ -134,9 +103,9 @@ namespace SimpleFSM {
        */
       FSMError transit(StateEnum newState) {
         if (!_started) return FSMError::FSM_NOT_STARTED;
-        _states[to_int(_currentState)]->exit();
+        _states[to_size_t(_currentState)]->exit();
         _currentState = newState;
-        _states[to_int(_currentState)]->entry();
+        _states[to_size_t(_currentState)]->entry();
         return FSMError::OK;
       }
 
@@ -150,14 +119,14 @@ namespace SimpleFSM {
        */
       FSMError emit(EventEnum event, EventPayload const &payload) {
         if (!_started) return FSMError::FSM_NOT_STARTED;
-        _states[to_int(_currentState)]->react(event, payload);
+        _states[to_size_t(_currentState)]->react(event, payload);
         return FSMError::OK;
       }
 
       FSMError emit(EventEnum event) {
         constexpr bool payloadIsEmpty = ::std::is_same<EventPayload, EmptyPayload>::value;
         static_assert(payloadIsEmpty, "Cannot call emit() without a payload if the FSM events have a payload");
-        return emit(event, EmptyPayload());
+        return emit(event, EventPayload());
       }
 
       /**
@@ -165,7 +134,7 @@ namespace SimpleFSM {
        */
       FSMError update() {
         if (!_started) return FSMError::FSM_NOT_STARTED;
-        _states[to_int(_currentState)]->loop();
+        _states[to_size_t(_currentState)]->loop();
         return FSMError::OK;
       }
 
@@ -175,55 +144,6 @@ namespace SimpleFSM {
       bool      _started = false;
       StateEnum _initialState = StateEnum::_SIMPLE_FSM_INVALID_;
       StateEnum _currentState = StateEnum::_SIMPLE_FSM_INVALID_;
-      State    *_states[to_int(StateEnum::_SIMPLE_FSM_INVALID_)] = {nullptr};
+      State    *_states[to_size_t(StateEnum::_SIMPLE_FSM_INVALID_)] = {nullptr};
   };
-
-  template <class StateEnum, class EventEnum, class EventPayload_t=EmptyPayload>
-  class HookableFSM: public FSM<StateEnum, EventEnum, EventPayload_t> {
-  private:
-    using Base = FSM<StateEnum, EventEnum, EventPayload_t>;
-
-  public:
-    using TransitionHook = std::function<void (StateEnum from, StateEnum to)>;
-    using EventHook = std::function<void (EventEnum event, EventPayload_t const &payload)>;
-
-    void onTransition(TransitionHook const &hook) { _transitionHooks.push_back(hook); }
-    void onEvent(EventHook const &hook) { _eventHooks.push_back(hook); }
-
-    FSMError emit(EventEnum event, EventPayload_t const &payload) {
-      auto result = Base::emit(event, payload);
-      if (result == FSMError::OK) {
-        for (auto const &hook : _eventHooks) {
-          hook(event, payload);
-        }
-      }
-      return result;
-    }
-
-    FSMError emit(EventEnum event) {
-      auto result = Base::emit(event);
-      if (result == FSMError::OK) {
-        for (auto const &hook : _eventHooks) {
-          hook(event);
-        }
-      }
-      return result;
-    }
-
-    FSMError transit(StateEnum newState) {
-      auto oldState = Base::getCurrentState();
-      auto result = Base::transit(newState);
-      if (result == FSMError::OK) {
-        for (auto const &hook : _transitionHooks) {
-          hook(oldState, newState);
-        }
-      }
-      return result;
-    }
-
-  private:
-    std::vector<TransitionHook>  _transitionHooks;
-    std::vector<EventHook>       _eventHooks;
-  };
-
 };
