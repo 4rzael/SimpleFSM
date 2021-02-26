@@ -67,7 +67,7 @@ namespace SimpleFSM {
         auto s = state->getValue();
         if (_started) return FSMError::FSM_ALREADY_STARTED;
         if (s >= StateEnum::_SIMPLE_FSM_INVALID_) return FSMError::BAD_STATE; //TODO: Make sure enums are unsigned
-        if (_states[to_size_t(s)] != nullptr) return FSMError::STATE_ALREADY_SET;
+        if (getStatePointer(s) != nullptr) return FSMError::STATE_ALREADY_SET;
         _states[to_size_t(s)] = state;
         return FSMError::OK;
       }
@@ -85,7 +85,7 @@ namespace SimpleFSM {
         _initialState = initialState;
         _currentState = _initialState;
         _started = true;
-        _states[to_size_t(_currentState)]->entry();
+        getStatePointer(_currentState)->entry();
         return FSMError::OK;
       }
 
@@ -103,9 +103,9 @@ namespace SimpleFSM {
        */
       FSMError transit(StateEnum newState) {
         if (!_started) return FSMError::FSM_NOT_STARTED;
-        _states[to_size_t(_currentState)]->exit();
+        getStatePointer(_currentState)->exit();
         _currentState = newState;
-        _states[to_size_t(_currentState)]->entry();
+        getStatePointer(_currentState)->entry();
         return FSMError::OK;
       }
 
@@ -119,7 +119,7 @@ namespace SimpleFSM {
        */
       FSMError emit(EventEnum event, EventPayload const &payload) {
         if (!_started) return FSMError::FSM_NOT_STARTED;
-        _states[to_size_t(_currentState)]->react(event, payload);
+        getStatePointer(_currentState)->react(event, payload);
         return FSMError::OK;
       }
 
@@ -134,11 +134,12 @@ namespace SimpleFSM {
        */
       FSMError update() {
         if (!_started) return FSMError::FSM_NOT_STARTED;
-        _states[to_size_t(_currentState)]->loop();
+        getStatePointer(_currentState)->loop();
         return FSMError::OK;
       }
 
       StateEnum getCurrentState() const { return _currentState; }
+      State    *getStatePointer(StateEnum s) { return _states[to_size_t(s)]; }
 
     private:
       bool      _started = false;
