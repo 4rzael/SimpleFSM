@@ -45,15 +45,20 @@ int main() {
   }));
 
   fsm.addRule([&fsm](States state) {
-    return (rand() % 2 == 1) ? state : fsm.getCurrentState();
+    if (state == States::ON && (rand() % 4 == 1)) return States::OFF;
+    return state;
   });
   fsm.onPermissionRejection([](States to) {
     std::cout << "Permission rejected" << std::endl;
   });
 
-  fsm.start(States::ON);
+  fsm.start(States::OFF);
   std::cout << "Toggling" << std::endl;
   fsm.emit(Events::TOGGLE);
+  for (int i = 0; i < 5; ++i) {
+    std::cout << "Updating" << std::endl;
+    fsm.update();
+  }
   std::cout << "Toggling" << std::endl;
   fsm.emit(Events::TOGGLE);
   std::cout << "Toggling" << std::endl;
