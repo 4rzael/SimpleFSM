@@ -41,6 +41,16 @@ namespace SimpleFSM {
       return Base::update();
     }
 
+    FSMError checkRules() {
+      auto state = Base::getCurrentState();
+      auto redirect = _checkForPermission(state);
+      if (state != redirect) {
+        _forceTransit(redirect);
+        return FSMError::INVALID_PERMISSION;
+      }
+      return FSMError::OK;
+    }
+
   private:
     FSMError _forceTransit(StateEnum state) {
       return Base::transit(state);
