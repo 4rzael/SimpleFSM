@@ -51,6 +51,10 @@ namespace SimpleFSM {
       return FSMError::OK;
     }
 
+    bool wouldAllowState(StateEnum state) {
+      return _checkForPermission(state) == state;
+    }
+
   private:
     FSMError _forceTransit(StateEnum state) {
       return Base::transit(state);
