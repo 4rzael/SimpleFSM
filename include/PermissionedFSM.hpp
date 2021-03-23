@@ -27,7 +27,10 @@ namespace SimpleFSM {
 
     FSMError transit(StateEnum newState) {
       auto redirect = _checkForPermission(newState);
-      if (redirect != newState) return FSMError::INVALID_PERMISSION;
+      if (redirect != newState) {
+        _forceTransit(redirect);
+        return FSMError::INVALID_PERMISSION;
+      }
       return Base::transit(newState);
     }
 
