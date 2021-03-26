@@ -55,7 +55,7 @@ namespace SimpleFSM {
     }
 
     bool wouldAllowState(StateEnum state) {
-      return _checkForPermission(state) == state;
+      return _checkForPermission(state, false) == state;
     }
 
   private:
@@ -63,12 +63,14 @@ namespace SimpleFSM {
       return Base::transit(state);
     }
 
-    StateEnum _checkForPermission(StateEnum newState) {
+    StateEnum _checkForPermission(StateEnum newState, bool triggerCallbacks=true) {
       for (auto &rule : _rules) {
         auto redirect = rule(newState);
         if (redirect != newState) {
-          for (auto &cb : _rejectCallbacks) {
-            cb(newState);
+          if (triggerCallbacks) {
+            for (auto &cb : _rejectCallbacks) {
+              cb(newState);
+            }
           }
           return redirect;
         }
