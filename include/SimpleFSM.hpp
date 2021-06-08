@@ -15,7 +15,8 @@ namespace SimpleFSM {
     BAD_STATE,
     STATE_ALREADY_SET,
     MISSING_STATE,
-    INVALID_PERMISSION
+    INVALID_PERMISSION,
+    ASYNC_OPERATION_ERROR,
   };
 
   struct EmptyPayload {};
@@ -53,6 +54,7 @@ namespace SimpleFSM {
         virtual void loop() = 0;
         virtual void exit() = 0;
         virtual void react(EventEnum event, EventPayload const &payload) = 0;
+        virtual char const *getName() { return "?"; }
       private:
         StateEnum _state;
       };
@@ -119,6 +121,7 @@ namespace SimpleFSM {
        */
       FSMError emit(EventEnum event, EventPayload const &payload) {
         if (!_started) return FSMError::FSM_NOT_STARTED;
+
         getStatePointer(_currentState)->react(event, payload);
         return FSMError::OK;
       }
