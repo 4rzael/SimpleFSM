@@ -54,7 +54,7 @@ namespace SimpleFSM {
         virtual void loop() = 0;
         virtual void exit() = 0;
         virtual void react(EventEnum event, EventPayload const &payload) = 0;
-        virtual char const *getName() { return "?"; }
+        virtual char const *getName() const { return "?"; }
       private:
         StateEnum _state;
       };
