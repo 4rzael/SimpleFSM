@@ -8,7 +8,7 @@ namespace SimpleFSM {
   class LockContext {
   public:
     LockContext(IConcurrencyPlatform::Mutex *mutex): _mutex(mutex) {
-      while (!_mutex->take(1000)) {}
+      while (!_mutex->take(1)) {}  // Requires OS frequency >= 1kHz
     }
     // Can be called to unlock before destruction
     void unlock() { 

@@ -22,6 +22,11 @@ namespace SimpleFSM {
       }
     }
 
+    FSMError start(StateEnum initialState) {
+      LockContext lock(_mutex);
+      return Base::start(initialState);
+    }
+
     /**
      * @brief Transitions to a next state.
       * This will be replaced by a templated method to be able to build .dot files (and will thus be deprecated soon)
@@ -68,7 +73,9 @@ namespace SimpleFSM {
     FSMError update() {
       if constexpr (EVENT_QUEUE_SIZE != 0) {
         QueuedEvent ev;
-        while (_eventQueue->pop(&ev, 0)) {
+        for (uint i = 0; i < EVENT_QUEUE_SIZE; ++i) {
+          if (!_eventQueue->pop(&ev, 0))
+            break;
           Base::emit(ev.event, ev.payload);
         }
       }

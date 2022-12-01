@@ -6,10 +6,11 @@ namespace SimpleFSM {
    * @brief An implementation of the class State, that can be built by giving it lambdas.
    * This allows to create small FSMs with few boilerplate
    */
-  template <class StateEnum, class EventEnum, class EventPayload=EmptyPayload>
-  class LambdaState : public FSM<StateEnum, EventEnum, EventPayload>::State {
+  template <class StateEnum, class EventEnum, class EventPayload=EmptyPayload,
+            typename Base = typename FSM<StateEnum, EventEnum, EventPayload>::State>
+  class LambdaState : public Base {
   private:
-    using BaseState = typename FSM<StateEnum, EventEnum, EventPayload>::State;
+    using BaseState = Base;
 
   public:
     using EntryFunction = std::function<void ()>;
